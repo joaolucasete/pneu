@@ -10,41 +10,28 @@ struct Location {
 }
 
 #[derive(Debug)]
-struct Int {
-    value: i32,
-    location: Location
-}
-
-#[derive(Debug)]
-struct Str {
-    value: String,
-    location: Location
-}
-
-#[derive(Debug)]
-struct Boolean {
-    value: bool,
-    location: Location
-}
-
-#[derive(Debug)]
 struct Tuple {
     first: Term,
-    second: Term,
+    second: Term
+}
+
+#[derive(Debug)]
+struct Term {
+    value: TermValue,
     location: Location
 }
 
 #[derive(Debug)]
-enum Term {
-    Int(Int),
-    Str(Str),
-    Boolean(Boolean),
+enum TermValue {
+    Int(i32),
+    Str(String),
+    Boolean(bool),
+    Var(Var),
     Let(Box<Let>),
     Function(Box<Function>),
     If(Box<If>),
     Binary(Box<Binary>),
     Call(Box<Call>),
-    Var(Var),
     Print(Box<Print>),
     First(Box<First>),
     Second(Box<Second>),
@@ -72,199 +59,208 @@ enum BinaryOperator {
 struct Binary {
     lhs: Term,
     rhs: Term,
-    op: BinaryOperator,
-    location: Location
+    op: BinaryOperator
 }
 
 #[derive(Debug)]
 struct File {
     name: String,
-    expression: Term,
-    location: Location
+    expression: Term
 }
 
 #[derive(Debug)]
-struct Parameter {
-    text: String,
-    location: Location
-}
+struct Parameter(String);
 
 #[derive(Debug)]
 struct Let {
     name: Parameter,
     value: Term,
-    next: Term,
-    location: Location,
+    next: Term
 }
 
 #[derive(Debug)]
 struct Function {
     parameters: Vec<Parameter>,
-    value: Term,
-    location: Location
+    value: Term
 }
 
 #[derive(Debug)]
 struct If {
     condition:Term,
     then: Term,
-    otherwise: Term,
-    location: Location,
-}
-
-#[derive(Debug)]
-struct Print {
-    value:	Term,
-    location: Location,
+    otherwise: Term
 }
 
 #[derive(Debug)]
 struct Call {
     callee:	Term,
-    arguments: Vec<Term>,
-    location: Location,
+    arguments: Vec<Term>
 }
 
 #[derive(Debug)]
-struct Var {
-    text: String,
-    location: Location,
-}
+struct Var(String);
 
 #[derive(Debug)]
-struct First {
-    value: Term,
-    location: Location,
-}
+struct First(Term);
 
 #[derive(Debug)]
-struct Second {
-    value: Term,
-    location: Location,
-}
+struct Second(Term);
+
+#[derive(Debug)]
+struct Print(Term);
 
 fn parse_term(v: &Value) -> Term {
+    let location = get_field("location", v);
     let kind = get_field("kind", v);
     let kind = as_string(kind);
 
-    match kind.as_str() {
+    let value = match kind.as_str() {
         "Int" => {
             let i = parse_int(v);
-            Term::Int(i)
+            TermValue::Int(i)
         },
         "Str" => {
             let s = parse_string(v);
-            Term::Str(s)
+            TermValue::Str(s)
         },
         "Bool" => {
             let s = parse_boolean(v);
-            Term::Boolean(s)
+            TermValue::Boolean(s)
         },
         "Let" => {
             let l = parse_let(v);
-            Term::Let(Box::new(l))
+            TermValue::Let(Box::new(l))
         },
         "Function" => {
             let f = parse_function(v);
-            Term::Function(Box::new(f))
+            TermValue::Function(Box::new(f))
         },
         "If" => {
             let i = parse_if(v);
-            Term::If(Box::new(i))
+            TermValue::If(Box::new(i))
         },
         "Binary" => {
             let b = parse_binary(v);
-            Term::Binary(Box::new(b))
+            TermValue::Binary(Box::new(b))
         },
         "Call" => {
             let c = parse_call(v);
-            Term::Call(Box::new(c))
+            TermValue::Call(Box::new(c))
         },
         "Var" => {
             let v = parse_var(v);
-            Term::Var(v)
+            TermValue::Var(v)
         },
         "Print" => {
             let p = parse_print(v);
-            Term::Print(Box::new(p))
+            TermValue::Print(Box::new(p))
         },
         "Tuple" => {
             let t = parse_tuple(v);
-            Term::Tuple(Box::new(t))
+            TermValue::Tuple(Box::new(t))
         },
         "First" => {
             let f = parse_first(v);
-            Term::First(Box::new(f))
+            TermValue::First(Box::new(f))
         },
         "Second" => {
             let s = parse_second(v);
-            Term::Second(Box::new(s))
+            TermValue::Second(Box::new(s))
         },
         _ => panic!("unknown kind: {}", kind)
+    };
+
+    Term {
+        value,
+        location: parse_location(location)
     }
 }
 
 fn parse_tuple(v: &Value) -> Tuple {
     let first = get_field("first", v);
     let second = get_field("second", v);
-    let location = get_field("location", v);
 
     Tuple {
         first: parse_term(first),
-        second: parse_term(second),
-        location: parse_location(location)
+        second: parse_term(second)
+    }
+}
+
+fn eval(t: TermValue) -> TermValue {
+    match t {
+        TermValue::Int(_) => t,
+        TermValue::Str(_) => t,
+        TermValue::Boolean(_) => t,
+        TermValue::Let(_) => todo!(),
+        TermValue::Function(_) => todo!(),
+        TermValue::If(_) => todo!(),
+        TermValue::Binary(b) => eval_binary(b.as_ref()),
+        TermValue::Call(_) => todo!(),
+        TermValue::Var(_) => todo!(),
+        TermValue::Print(_) => todo!(),
+        TermValue::First(_) => todo!(),
+        TermValue::Second(_) => todo!(),
+        TermValue::Tuple(_) => todo!(),
+    }
+}
+
+fn eval_binary(b: &Binary) -> TermValue {
+    match &b.op {
+        BinaryOperator::Add => add_operation(b),
+        BinaryOperator::Sub => todo!(),
+        BinaryOperator::Mul => todo!(),
+        BinaryOperator::Div => todo!(),
+        BinaryOperator::Rem => todo!(),
+        BinaryOperator::Eq => todo!(),
+        BinaryOperator::Neq => todo!(),
+        BinaryOperator::Lt => todo!(),
+        BinaryOperator::Gt => todo!(),
+        BinaryOperator::Lte => todo!(),
+        BinaryOperator::Gte => todo!(),
+        BinaryOperator::And => todo!(),
+        BinaryOperator::Or => todo!(),
+    }
+}
+
+fn add_operation(b: &Binary) -> TermValue {
+
+    match (&b.rhs.value, &b.lhs.value) {
+        (TermValue::Int(l), TermValue::Int(r)) => TermValue::Int(l + r),
+        _ => todo!()
     }
 }
 
 fn parse_second(v: &Value) -> Second {
     let value = get_field("value", v);
-    let location = get_field("location", v);
 
-    Second {
-        value: parse_term(value),
-        location: parse_location(location),
-    }
+    Second(parse_term(value))
 }
 
 fn parse_first(v: &Value) -> First {
     let value = get_field("value", v);
-    let location = get_field("location", v);
 
-    First {
-        value: parse_term(value),
-        location: parse_location(location),
-    }
+    First(parse_term(value))
 }
 
 fn parse_print(v: &Value) -> Print {
     let value = get_field("value", v);
-    let location = get_field("location", v);
 
-    Print {
-        value: parse_term(value),
-        location: parse_location(location)
-    }
+    Print(parse_term(value))
 }
 
 fn parse_var(v: &Value) -> Var {
     let text = get_field("text", v);
-    let location = get_field("location", v);
 
-    Var {
-        text: as_string(text),
-        location: parse_location(location),
-    }
+    Var(as_string(text))
 }
 
 fn parse_call(v: &Value) -> Call {
     let callee = get_field("callee", v);
     let arguments = get_field("arguments", v);
-    let location = get_field("location", v);
 
     Call {
         callee: parse_term(callee),
         arguments: parse_array(arguments, |t| parse_term(&t)),
-        location: parse_location(location),
     }
 }
 
@@ -272,13 +268,11 @@ fn parse_binary(v: &Value) -> Binary {
     let lhs = get_field("lhs", v);
     let rhs = get_field("rhs", v);
     let op = get_field("op", v);
-    let location = get_field("location", v);
 
     Binary {
         lhs: parse_term(lhs),
         rhs: parse_term(rhs),
         op: parse_binary_op(as_string(op)),
-        location: parse_location(location),
     }
 }
 
@@ -305,25 +299,21 @@ fn parse_if(v: &Value) -> If {
     let condition = get_field("condition", v);
     let then = get_field("then", v);
     let otherwise = get_field("otherwise", v);
-    let location = get_field("location", v);
 
     If {
         condition: parse_term(condition),
         then: parse_term(then),
         otherwise: parse_term(otherwise),
-        location: parse_location(location),
     }
 }
 
 fn parse_function(v: &Value) -> Function {
     let parameters = get_field("parameters", v);
     let value = get_field("value", v);
-    let location = get_field("location", v);
 
     Function {
         parameters: parse_array(parameters, |v| parse_parameter(&v)),
         value: parse_term(value),
-        location: parse_location(location),
     }
 }
 
@@ -331,36 +321,28 @@ fn parse_let(v: &Value) -> Let {
     let parameter = get_field("name", v);
     let value = get_field("value", v);
     let next = get_field("next", v);
-    let location = get_field("location", v);
 
     Let {
         name: parse_parameter(parameter),
         value: parse_term(value),
         next: parse_term(next),
-        location: parse_location(location),
     }
 }
 
 fn parse_file(v: &Value) -> File {
     let name =get_field("name", v);
     let expression =get_field("expression", v);
-    let location =get_field("location", v);
 
     File {
         name: as_string(name),
         expression: parse_term(expression),
-        location: parse_location(location)
     }
 }
 
 fn parse_parameter(v: &Value) -> Parameter {
     let text = get_field("text", v);
-    let location = get_field("location", v);
 
-    Parameter {
-        text: as_string(text),
-        location: parse_location(location)
-    }
+    Parameter(as_string(text))
 }
 
 fn parse_location(v: &Value) -> Location {
@@ -375,35 +357,20 @@ fn parse_location(v: &Value) -> Location {
     }
 }
 
-fn parse_int(v: &Value) -> Int {
+fn parse_int(v: &Value) -> i32 {
     let value = get_field("value", v);
-    let location = get_field("location", v);
-
-    Int {
-        value: as_int(value),
-        location: parse_location(location)
-    }
+    as_int(value)
 }
 
-fn parse_string(v: &Value) -> Str {
+fn parse_string(v: &Value) -> String {
     let value = get_field("value", v);
-    let location = get_field("location", v);
-
-    Str {
-        value: as_string(value),
-        location: parse_location(location)
-    }
+    as_string(value)
 }
 
 
-fn parse_boolean(v: &Value) -> Boolean {
+fn parse_boolean(v: &Value) -> bool {
     let value = get_field("value", v);
-    let location = get_field("location", v);
-
-    Boolean {
-        value: as_bool(value),
-        location: parse_location(location)
-    }
+    as_bool(value)
 }
 
 fn parse_array<T, F: Fn(Value) -> T>(v: &Value, f: F) -> Vec<T> {
@@ -431,5 +398,22 @@ fn main() {
     let file = std::fs::File::open("files/fib.json").expect("couldn't open file");
     let buf_reader = BufReader::new(file);
     let v: Value = serde_json::from_reader(buf_reader).expect("failed to read json");
-    dbg!(parse_file(&v));
+
+    let binary = Binary {
+        lhs: Term {
+            value: TermValue::Int(32),
+            location: sample_location()
+        },
+        rhs: Term {
+            value: TermValue::Int(32),
+            location: sample_location()
+        },
+        op: BinaryOperator::Add
+    };
+    dbg!(eval_binary(&binary));
+}
+
+
+fn sample_location() -> Location {
+    Location { start: 1, end: 1, filename: "sample-location".to_owned() }
 }

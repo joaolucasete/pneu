@@ -10,5 +10,8 @@
 [x] First
 [x] Second
 [x] Bool
-[] Tuple
+[x] Tuple
 [x] Var
+
+# Evaluation
+[ ] Binary Operators
