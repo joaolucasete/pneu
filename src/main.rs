@@ -28,6 +28,13 @@ struct Boolean {
 }
 
 #[derive(Debug)]
+struct Tuple {
+    first: Term,
+    second: Term,
+    location: Location
+}
+
+#[derive(Debug)]
 enum Term {
     Int(Int),
     Str(Str),
@@ -36,6 +43,12 @@ enum Term {
     Function(Box<Function>),
     If(Box<If>),
     Binary(Box<Binary>),
+    Call(Box<Call>),
+    Var(Var),
+    Print(Box<Print>),
+    First(Box<First>),
+    Second(Box<Second>),
+    Tuple(Box<Tuple>),
 }
 
 #[derive(Debug)]
@@ -99,10 +112,39 @@ struct If {
     location: Location,
 }
 
-// TODO: File
+#[derive(Debug)]
+struct Print {
+    value:	Term,
+    location: Location,
+}
+
+#[derive(Debug)]
+struct Call {
+    callee:	Term,
+    arguments: Vec<Term>,
+    location: Location,
+}
+
+#[derive(Debug)]
+struct Var {
+    text: String,
+    location: Location,
+}
+
+#[derive(Debug)]
+struct First {
+    value: Term,
+    location: Location,
+}
+
+#[derive(Debug)]
+struct Second {
+    value: Term,
+    location: Location,
+}
 
 fn parse_term(v: &Value) -> Term {
-    let kind = v.get("kind").expect("expected string");
+    let kind = get_field("kind", v);
     let kind = as_string(kind);
 
     match kind.as_str() {
@@ -134,26 +176,103 @@ fn parse_term(v: &Value) -> Term {
             let b = parse_binary(v);
             Term::Binary(Box::new(b))
         },
-        _ => {
-            let b = Boolean {
-                value: false,
-                location: Location {
-                    start: 1,
-                    end: 1,
-                    filename: "a".to_owned()
-                }
-            };
+        "Call" => {
+            let c = parse_call(v);
+            Term::Call(Box::new(c))
+        },
+        "Var" => {
+            let v = parse_var(v);
+            Term::Var(v)
+        },
+        "Print" => {
+            let p = parse_print(v);
+            Term::Print(Box::new(p))
+        },
+        "Tuple" => {
+            let t = parse_tuple(v);
+            Term::Tuple(Box::new(t))
+        },
+        "First" => {
+            let f = parse_first(v);
+            Term::First(Box::new(f))
+        },
+        "Second" => {
+            let s = parse_second(v);
+            Term::Second(Box::new(s))
+        },
+        _ => panic!("unknown kind: {}", kind)
+    }
+}
 
-            Term::Boolean(b)
-        }
+fn parse_tuple(v: &Value) -> Tuple {
+    let first = get_field("first", v);
+    let second = get_field("second", v);
+    let location = get_field("location", v);
+
+    Tuple {
+        first: parse_term(first),
+        second: parse_term(second),
+        location: parse_location(location)
+    }
+}
+
+fn parse_second(v: &Value) -> Second {
+    let value = get_field("value", v);
+    let location = get_field("location", v);
+
+    Second {
+        value: parse_term(value),
+        location: parse_location(location),
+    }
+}
+
+fn parse_first(v: &Value) -> First {
+    let value = get_field("value", v);
+    let location = get_field("location", v);
+
+    First {
+        value: parse_term(value),
+        location: parse_location(location),
+    }
+}
+
+fn parse_print(v: &Value) -> Print {
+    let value = get_field("value", v);
+    let location = get_field("location", v);
+
+    Print {
+        value: parse_term(value),
+        location: parse_location(location)
+    }
+}
+
+fn parse_var(v: &Value) -> Var {
+    let text = get_field("text", v);
+    let location = get_field("location", v);
+
+    Var {
+        text: as_string(text),
+        location: parse_location(location),
+    }
+}
+
+fn parse_call(v: &Value) -> Call {
+    let callee = get_field("callee", v);
+    let arguments = get_field("arguments", v);
+    let location = get_field("location", v);
+
+    Call {
+        callee: parse_term(callee),
+        arguments: parse_array(arguments, |t| parse_term(&t)),
+        location: parse_location(location),
     }
 }
 
 fn parse_binary(v: &Value) -> Binary {
-    let lhs = v.get("lhs").expect("expected lhs");
-    let rhs = v.get("rhs").expect("expected rhs");
-    let op = v.get("op").expect("expected op");
-    let location = v.get("location").expect("expected location");
+    let lhs = get_field("lhs", v);
+    let rhs = get_field("rhs", v);
+    let op = get_field("op", v);
+    let location = get_field("location", v);
 
     Binary {
         lhs: parse_term(lhs),
@@ -183,10 +302,10 @@ fn parse_binary_op(op: String) -> BinaryOperator {
 }
 
 fn parse_if(v: &Value) -> If {
-    let condition = v.get("condition").expect("expected condition");
-    let then = v.get("then").expect("expected then");
-    let otherwise = v.get("otherwise").expect("expected otherwise");
-    let location = v.get("location").expect("expected location");
+    let condition = get_field("condition", v);
+    let then = get_field("then", v);
+    let otherwise = get_field("otherwise", v);
+    let location = get_field("location", v);
 
     If {
         condition: parse_term(condition),
@@ -197,9 +316,9 @@ fn parse_if(v: &Value) -> If {
 }
 
 fn parse_function(v: &Value) -> Function {
-    let parameters = v.get("parameters").expect("expected parameters");
-    let value = v.get("value").expect("expected value");
-    let location = v.get("location").expect("expected location");
+    let parameters = get_field("parameters", v);
+    let value = get_field("value", v);
+    let location = get_field("location", v);
 
     Function {
         parameters: parse_array(parameters, |v| parse_parameter(&v)),
@@ -209,10 +328,10 @@ fn parse_function(v: &Value) -> Function {
 }
 
 fn parse_let(v: &Value) -> Let {
-    let parameter = v.get("name").expect("expected name");
-    let value = v.get("value").expect("expected value");
-    let next = v.get("next").expect("expected next");
-    let location = v.get("location").expect("expected location");
+    let parameter = get_field("name", v);
+    let value = get_field("value", v);
+    let next = get_field("next", v);
+    let location = get_field("location", v);
 
     Let {
         name: parse_parameter(parameter),
@@ -222,10 +341,10 @@ fn parse_let(v: &Value) -> Let {
     }
 }
 
-fn parse_file(v: Value) -> File {
-    let name = v.get("name").expect("expected name");
-    let expression = v.get("expression").expect("expected expression");
-    let location = v.get("location").expect("expected location");
+fn parse_file(v: &Value) -> File {
+    let name =get_field("name", v);
+    let expression =get_field("expression", v);
+    let location =get_field("location", v);
 
     File {
         name: as_string(name),
@@ -235,8 +354,8 @@ fn parse_file(v: Value) -> File {
 }
 
 fn parse_parameter(v: &Value) -> Parameter {
-    let text = v.get("text").expect("expected text");
-    let location = v.get("location").expect("expected location");
+    let text = get_field("text", v);
+    let location = get_field("location", v);
 
     Parameter {
         text: as_string(text),
@@ -245,9 +364,9 @@ fn parse_parameter(v: &Value) -> Parameter {
 }
 
 fn parse_location(v: &Value) -> Location {
-    let start = v.get("start").expect("expected start");
-    let end = v.get("end").expect("expected end");
-    let filename = v.get("filename").expect("expected filename");
+    let start = get_field("start", v);
+    let end = get_field("end", v);
+    let filename = get_field("filename", v);
 
     Location {
         start: as_int(start) as usize,
@@ -257,8 +376,8 @@ fn parse_location(v: &Value) -> Location {
 }
 
 fn parse_int(v: &Value) -> Int {
-    let value = v.get("value").expect("expected value");
-    let location = v.get("location").expect("expected location");
+    let value = get_field("value", v);
+    let location = get_field("location", v);
 
     Int {
         value: as_int(value),
@@ -267,8 +386,8 @@ fn parse_int(v: &Value) -> Int {
 }
 
 fn parse_string(v: &Value) -> Str {
-    let value = v.get("value").expect("expected value");
-    let location = v.get("location").expect("expected location");
+    let value = get_field("value", v);
+    let location = get_field("location", v);
 
     Str {
         value: as_string(value),
@@ -278,8 +397,8 @@ fn parse_string(v: &Value) -> Str {
 
 
 fn parse_boolean(v: &Value) -> Boolean {
-    let value = v.get("value").expect("expected value");
-    let location = v.get("location").expect("expected location");
+    let value = get_field("value", v);
+    let location = get_field("location", v);
 
     Boolean {
         value: as_bool(value),
@@ -304,11 +423,13 @@ fn as_bool(v: &Value) -> bool {
     serde_json::from_value(v.to_owned()).expect("expected boolean")
 }
 
+fn get_field<'a>(field_name: &str, v: &'a Value) -> &'a Value {
+    v.get(field_name).expect(format!("expected field '{}'", field_name).as_str())
+}
+
 fn main() {
     let file = std::fs::File::open("files/fib.json").expect("couldn't open file");
     let buf_reader = BufReader::new(file);
     let v: Value = serde_json::from_reader(buf_reader).expect("failed to read json");
-    // parse_json_ast(&v);
-    dbg!(parse_file(v));
-
+    dbg!(parse_file(&v));
 }

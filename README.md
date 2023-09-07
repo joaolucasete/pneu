@@ -1,14 +1,14 @@
 # TERMs parsed
 [x] Int
 [x] Str
-[] Call
+[x] Call
 [x] Binary
 [x] Function
 [x] Let
 [x] If
-[] Print
-[] First
-[] Second
+[x] Print
+[x] First
+[x] Second
 [x] Bool
 [] Tuple
-[] Var
+[x] Var
