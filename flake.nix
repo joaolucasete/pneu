@@ -16,6 +16,7 @@
           buildInputs = [ 
             rustc
             cargo
+            rustfmt
 
             rust-analyzer
           ];

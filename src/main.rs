@@ -6,19 +6,19 @@ use serde_json::Value;
 struct Location {
     start: usize,
     end: usize,
-    filename: String
+    filename: String,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 struct Tuple {
     first: Term,
-    second: Term
+    second: Term,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 struct Term {
     value: TermValue,
-    location: Location
+    location: Location,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -52,20 +52,20 @@ enum BinaryOperator {
     Lte,
     Gte,
     And,
-    Or
+    Or,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 struct Binary {
     lhs: Term,
     rhs: Term,
-    op: BinaryOperator
+    op: BinaryOperator,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 struct File {
     name: String,
-    expression: Term
+    expression: Term,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -75,26 +75,26 @@ struct Parameter(String);
 struct Let {
     name: Parameter,
     value: Term,
-    next: Term
+    next: Term,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 struct Function {
     parameters: Vec<Parameter>,
-    value: Term
+    value: Term,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 struct If {
-    condition:Term,
+    condition: Term,
     then: Term,
-    otherwise: Term
+    otherwise: Term,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 struct Call {
-    callee:	Term,
-    arguments: Vec<Term>
+    callee: Term,
+    arguments: Vec<Term>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -118,61 +118,61 @@ fn parse_term(v: &Value) -> Term {
         "Int" => {
             let i = parse_int(v);
             TermValue::Int(i)
-        },
+        }
         "Str" => {
             let s = parse_string(v);
             TermValue::Str(s)
-        },
+        }
         "Bool" => {
             let s = parse_boolean(v);
             TermValue::Boolean(s)
-        },
+        }
         "Let" => {
             let l = parse_let(v);
             TermValue::Let(Box::new(l))
-        },
+        }
         "Function" => {
             let f = parse_function(v);
             TermValue::Function(Box::new(f))
-        },
+        }
         "If" => {
             let i = parse_if(v);
             TermValue::If(Box::new(i))
-        },
+        }
         "Binary" => {
             let b = parse_binary(v);
             TermValue::Binary(Box::new(b))
-        },
+        }
         "Call" => {
             let c = parse_call(v);
             TermValue::Call(Box::new(c))
-        },
+        }
         "Var" => {
             let v = parse_var(v);
             TermValue::Var(v)
-        },
+        }
         "Print" => {
             let p = parse_print(v);
             TermValue::Print(Box::new(p))
-        },
+        }
         "Tuple" => {
             let t = parse_tuple(v);
             TermValue::Tuple(Box::new(t))
-        },
+        }
         "First" => {
             let f = parse_first(v);
             TermValue::First(Box::new(f))
-        },
+        }
         "Second" => {
             let s = parse_second(v);
             TermValue::Second(Box::new(s))
-        },
-        _ => panic!("unknown kind: {}", kind)
+        }
+        _ => panic!("unknown kind: {}", kind),
     };
 
     Term {
         value,
-        location: parse_location(location)
+        location: parse_location(location),
     }
 }
 
@@ -182,7 +182,7 @@ fn parse_tuple(v: &Value) -> Tuple {
 
     Tuple {
         first: parse_term(first),
-        second: parse_term(second)
+        second: parse_term(second),
     }
 }
 
@@ -225,49 +225,49 @@ fn eval_binary(b: &Binary) -> TermValue {
 fn or_operation(b: &Binary) -> TermValue {
     match (&b.lhs.value, &b.rhs.value) {
         (TermValue::Boolean(l), TermValue::Boolean(r)) => TermValue::Boolean(*l || *r),
-        _ => panic!("invalid operation between types")
+        _ => panic!("invalid operation between types"),
     }
 }
 
 fn and_operation(b: &Binary) -> TermValue {
     match (&b.lhs.value, &b.rhs.value) {
         (TermValue::Boolean(l), TermValue::Boolean(r)) => TermValue::Boolean(*l && *r),
-        _ => panic!("invalid operation between types")
+        _ => panic!("invalid operation between types"),
     }
 }
 
 fn gt_operation(b: &Binary) -> TermValue {
     match (&b.lhs.value, &b.rhs.value) {
         (TermValue::Int(l), TermValue::Int(r)) => TermValue::Boolean(l > r),
-        _ => panic!("invalid operation between types")
+        _ => panic!("invalid operation between types"),
     }
 }
 
 fn gte_operation(b: &Binary) -> TermValue {
     match (&b.lhs.value, &b.rhs.value) {
         (TermValue::Int(l), TermValue::Int(r)) => TermValue::Boolean(l >= r),
-        _ => panic!("invalid operation between types")
+        _ => panic!("invalid operation between types"),
     }
 }
 
 fn lt_operation(b: &Binary) -> TermValue {
     match (&b.lhs.value, &b.rhs.value) {
         (TermValue::Int(l), TermValue::Int(r)) => TermValue::Boolean(l < r),
-        _ => panic!("invalid operation between types")
+        _ => panic!("invalid operation between types"),
     }
 }
 
 fn lte_operation(b: &Binary) -> TermValue {
     match (&b.lhs.value, &b.rhs.value) {
         (TermValue::Int(l), TermValue::Int(r)) => TermValue::Boolean(l <= r),
-        _ => panic!("invalid operation between types")
+        _ => panic!("invalid operation between types"),
     }
 }
 
 fn neq_operation(b: &Binary) -> TermValue {
     match (&b.lhs.value, &b.rhs.value) {
         (TermValue::Int(l), TermValue::Int(r)) => TermValue::Boolean(l == r),
-        _ => panic!("invalid operation between types")
+        _ => panic!("invalid operation between types"),
     }
 }
 
@@ -278,28 +278,28 @@ fn eq_operation(b: &Binary) -> TermValue {
 fn rem_operation(b: &Binary) -> TermValue {
     match (&b.lhs.value, &b.rhs.value) {
         (TermValue::Int(l), TermValue::Int(r)) => TermValue::Int(l % r),
-        _ => panic!("invalid operation between types")
+        _ => panic!("invalid operation between types"),
     }
 }
 
 fn div_operation(b: &Binary) -> TermValue {
     match (&b.lhs.value, &b.rhs.value) {
         (TermValue::Int(l), TermValue::Int(r)) => TermValue::Int(l / r),
-        _ => panic!("invalid operation between types")
+        _ => panic!("invalid operation between types"),
     }
 }
 
 fn mul_operation(b: &Binary) -> TermValue {
     match (&b.lhs.value, &b.rhs.value) {
         (TermValue::Int(l), TermValue::Int(r)) => TermValue::Int(l * r),
-        _ => panic!("invalid operation between types")
+        _ => panic!("invalid operation between types"),
     }
 }
 
 fn sub_operation(b: &Binary) -> TermValue {
     match (&b.lhs.value, &b.rhs.value) {
         (TermValue::Int(l), TermValue::Int(r)) => TermValue::Int(l - r),
-        _ => panic!("invalid operation between types")
+        _ => panic!("invalid operation between types"),
     }
 }
 
@@ -309,7 +309,7 @@ fn add_operation(b: &Binary) -> TermValue {
         (TermValue::Str(l), TermValue::Str(r)) => TermValue::Str(format!("{}{}", l, r)),
         (TermValue::Str(l), TermValue::Int(r)) => TermValue::Str(format!("{}{}", l, r)),
         (TermValue::Int(l), TermValue::Str(r)) => TermValue::Str(format!("{}{}", l, r)),
-        (_ ,_) => panic!("invalid operation between types"),
+        (_, _) => panic!("invalid operation between types"),
     }
 }
 
@@ -374,7 +374,7 @@ fn parse_binary_op(op: String) -> BinaryOperator {
         "Gte" => BinaryOperator::Gte,
         "And" => BinaryOperator::And,
         "Or" => BinaryOperator::Or,
-        _ => panic!("unknown binary operator: {}", op)
+        _ => panic!("unknown binary operator: {}", op),
     }
 }
 
@@ -413,8 +413,8 @@ fn parse_let(v: &Value) -> Let {
 }
 
 fn parse_file(v: &Value) -> File {
-    let name =get_field("name", v);
-    let expression =get_field("expression", v);
+    let name = get_field("name", v);
+    let expression = get_field("expression", v);
 
     File {
         name: as_string(name),
@@ -450,7 +450,6 @@ fn parse_string(v: &Value) -> String {
     as_string(value)
 }
 
-
 fn parse_boolean(v: &Value) -> bool {
     let value = get_field("value", v);
     as_bool(value)
@@ -474,7 +473,8 @@ fn as_bool(v: &Value) -> bool {
 }
 
 fn get_field<'a>(field_name: &str, v: &'a Value) -> &'a Value {
-    v.get(field_name).expect(format!("expected field '{}'", field_name).as_str())
+    v.get(field_name)
+        .expect(format!("expected field '{}'", field_name).as_str())
 }
 
 fn main() {
@@ -485,17 +485,16 @@ fn main() {
     let binary = Binary {
         lhs: Term {
             value: TermValue::Int(32),
-            location: sample_location()
+            location: sample_location(),
         },
         rhs: Term {
             value: TermValue::Int(32),
-            location: sample_location()
+            location: sample_location(),
         },
-        op: BinaryOperator::Add
+        op: BinaryOperator::Add,
     };
     dbg!(eval_binary(&binary));
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -504,16 +503,16 @@ mod tests {
     #[test]
     fn test_add_int_int() {
         let expr = Binary {
-        lhs: Term {
-            value: TermValue::Int(32),
-            location: sample_location()
-        },
-        rhs: Term {
-            value: TermValue::Int(32),
-            location: sample_location()
-        },
-        op: BinaryOperator::Add
-    };
+            lhs: Term {
+                value: TermValue::Int(32),
+                location: sample_location(),
+            },
+            rhs: Term {
+                value: TermValue::Int(32),
+                location: sample_location(),
+            },
+            op: BinaryOperator::Add,
+        };
 
         let expected = TermValue::Int(64);
         let result = add_operation(&expr);
@@ -523,16 +522,16 @@ mod tests {
     #[test]
     fn test_add_int_str() {
         let expr = Binary {
-        lhs: Term {
-            value: TermValue::Int(32),
-            location: sample_location()
-        },
-        rhs: Term {
-            value: TermValue::Str("64".to_owned()),
-            location: sample_location()
-        },
-        op: BinaryOperator::Add
-    };
+            lhs: Term {
+                value: TermValue::Int(32),
+                location: sample_location(),
+            },
+            rhs: Term {
+                value: TermValue::Str("64".to_owned()),
+                location: sample_location(),
+            },
+            op: BinaryOperator::Add,
+        };
 
         let expected = TermValue::Str("3264".to_owned());
         let result = add_operation(&expr);
@@ -542,16 +541,16 @@ mod tests {
     #[test]
     fn test_add_str_int() {
         let expr = Binary {
-        lhs: Term {
-            value: TermValue::Str("64".to_owned()),
-            location: sample_location()
-        },
-        rhs: Term {
-            value: TermValue::Int(32),
-            location: sample_location()
-        },
-        op: BinaryOperator::Add
-    };
+            lhs: Term {
+                value: TermValue::Str("64".to_owned()),
+                location: sample_location(),
+            },
+            rhs: Term {
+                value: TermValue::Int(32),
+                location: sample_location(),
+            },
+            op: BinaryOperator::Add,
+        };
 
         let expected = TermValue::Str("6432".to_owned());
         let result = add_operation(&expr);
@@ -561,16 +560,16 @@ mod tests {
     #[test]
     fn test_add_str_str() {
         let expr = Binary {
-        lhs: Term {
-            value: TermValue::Str("32".to_owned()),
-            location: sample_location()
-        },
-        rhs: Term {
-            value: TermValue::Str("64".to_owned()),
-            location: sample_location()
-        },
-        op: BinaryOperator::Add
-    };
+            lhs: Term {
+                value: TermValue::Str("32".to_owned()),
+                location: sample_location(),
+            },
+            rhs: Term {
+                value: TermValue::Str("64".to_owned()),
+                location: sample_location(),
+            },
+            op: BinaryOperator::Add,
+        };
 
         let expected = TermValue::Str("3264".to_owned());
         let result = add_operation(&expr);
@@ -579,5 +578,9 @@ mod tests {
 }
 
 fn sample_location() -> Location {
-    Location { start: 1, end: 1, filename: "sample-location".to_owned() }
+    Location {
+        start: 1,
+        end: 1,
+        filename: "sample-location".to_owned(),
+    }
 }
