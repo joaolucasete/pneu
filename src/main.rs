@@ -1,4 +1,4 @@
-use std::{io::BufReader, ops::Add, collections::{HashMap, BTreeMap}};
+use std::{io::BufReader, ops::Add, collections::{HashMap, BTreeMap}, borrow::BorrowMut};
 
 use serde_json::Value;
 
@@ -49,6 +49,16 @@ macro_rules! term_expr {
             value: $value,
             location: Location::default()
         }
+    }
+}
+
+macro_rules! let_expr {
+    ($name:expr, $value:expr, $next:expr) => {
+        Box::new(Let {
+            name: Parameter($name),
+            value: $value,
+            next: $next
+        })
     }
 }
 
@@ -193,6 +203,13 @@ fn make_env() -> Env {
     HashMap::new()
 }
 
+// TODO: Fix performance
+fn add_to_env(e: &Env, key: String, value: TermValue) -> Env {
+    let mut cloned = e.clone();
+    cloned.insert(key, value.clone());
+    cloned.clone()
+}
+
 fn parse_term(v: &Value) -> Term {
     let location = get_field("location", v);
     let kind = get_field("kind", v);
@@ -289,7 +306,9 @@ fn eval(t: TermValue, env: &Env) -> TermValue {
 }
 
 fn eval_let(l: Let, env: &Env) -> TermValue {
-    todo!()
+    let Parameter(var_name) = l.name;
+    let new_env = add_to_env(env, var_name, l.value.value);
+    eval(l.next.value, &new_env)
 }
 
 fn eval_var(v: Var, env: &Env) -> TermValue {
@@ -1021,10 +1040,20 @@ mod tests {
      #[should_panic(expected = "no such variable: test")]
      fn test_var_panics_unknown_variable() {
         let env = &make_env();
-        let var = Var("test".to_owned());
+        let var = Var("test".into());
         eval_var(var, env);
      }
 
      // ----------------------------------------------------------
 
+     #[test]
+     fn test_let() {
+        let add_expr = term_expr!(TermValue::Binary(Box::new(binary_expr!(TermValue::Var(Var("name".into())), BinaryOperator::Add, TermValue::Int(10)))));
+        let ten = term_expr!(TermValue::Int(10));
+        let l = let_expr!("name".into(), ten, add_expr);
+
+        let env = &make_env();
+        let result = eval_let(*l, env);
+        assert_eq!(result, TermValue::Int(20))
+     }
 }
