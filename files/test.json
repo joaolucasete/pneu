@@ -1,0 +1,77 @@
+{
+    "name": "./files/test.rinha",
+    "expression": {
+        "kind": "If",
+        "condition": {
+            "kind": "Binary",
+            "lhs": {
+                "kind": "Int",
+                "value": 1,
+                "location": {
+                    "start": 6,
+                    "end": 7,
+                    "filename": "./files/test.rinha"
+                }
+            },
+            "op": "Lt",
+            "rhs": {
+                "kind": "Int",
+                "value": 2,
+                "location": {
+                    "start": 10,
+                    "end": 11,
+                    "filename": "./files/test.rinha"
+                }
+            },
+            "location": {
+                "start": 6,
+                "end": 11,
+                "filename": "./files/test.rinha"
+            }
+        },
+        "then": {
+            "kind": "Print",
+            "value": {
+                "kind": "Str",
+                "value": "true",
+                "location": {
+                    "start": 24,
+                    "end": 30,
+                    "filename": "./files/test.rinha"
+                }
+            },
+            "location": {
+                "start": 18,
+                "end": 31,
+                "filename": "./files/test.rinha"
+            }
+        },
+        "otherwise": {
+            "kind": "Print",
+            "value": {
+                "kind": "Str",
+                "value": "false",
+                "location": {
+                    "start": 54,
+                    "end": 61,
+                    "filename": "./files/test.rinha"
+                }
+            },
+            "location": {
+                "start": 48,
+                "end": 62,
+                "filename": "./files/test.rinha"
+            }
+        },
+        "location": {
+            "start": 2,
+            "end": 66,
+            "filename": "./files/test.rinha"
+        }
+    },
+    "location": {
+        "start": 2,
+        "end": 66,
+        "filename": "./files/test.rinha"
+    }
+}

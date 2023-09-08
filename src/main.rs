@@ -2,52 +2,103 @@ use std::{io::BufReader, ops::Add};
 
 use serde_json::Value;
 
+
 // Define a macro that takes two expressions and an operator as arguments
-macro_rules! binary {
+macro_rules! binary_expr {
     ($lhs:expr, $op:expr, $rhs:expr) => {
         // Create a Binary struct with the given arguments
         Binary {
             lhs: Term {
                 value: $lhs,
-                location: Location {
-                    start: 1,
-                    end: 1,
-                    filename: "sample-location".into(),
-                }
+                location: Location::default()
             },
             rhs: Term {
                 value: $rhs,
-                location: Location {
-                    start: 1,
-                    end: 1,
-                    filename: "sample-location".into(),
-                }
+                location: Location::default()
             },
             op: $op,
         }
     };
 }
 
-#[derive(Debug, Eq, PartialEq)]
+macro_rules! if_expr {
+    ($cond:expr, $then:expr, $otherwise:expr) => {
+        Box::new(If {
+            condition: Term {
+                value: $cond,
+                location: Location::default()
+            },
+            then: Term {
+                value: $then,
+                location: Location::default()
+            },
+            otherwise: Term {
+                value: $otherwise,
+                location: Location::default()
+            },
+        })
+
+    };
+}
+
+macro_rules! term_expr {
+    ($value:expr) => {
+        Term {
+            value: $value,
+            location: Location::default()
+        }
+    }
+}
+
+macro_rules! func_expr {
+    ($parameters:expr, $value:expr) => {
+        Box::new(Function {
+            parameters: $parameters,
+            value: term_expr!($value)
+        })
+    }
+}
+
+macro_rules! tuple_expr {
+    ($first:expr, $second:expr) => {
+        Box::new(Tuple {
+            first: term_expr!($first),
+            second: term_expr!($second),
+        })
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
 struct Location {
     start: usize,
     end: usize,
     filename: String,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+impl Location {
+    pub fn default() -> Self {
+        Self {
+            start: 1,
+            end: 1,
+            filename: "sample-location".into(),
+        }
+    }
+}
+
+
+#[derive(Debug, Eq, PartialEq, Clone)]
 struct Tuple {
     first: Term,
     second: Term,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 struct Term {
     value: TermValue,
     location: Location,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 enum TermValue {
     Int(i32),
     Str(String),
@@ -64,7 +115,7 @@ enum TermValue {
     Tuple(Box<Tuple>),
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 enum BinaryOperator {
     Add,
     Sub,
@@ -81,7 +132,7 @@ enum BinaryOperator {
     Or,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 struct Binary {
     lhs: Term,
     rhs: Term,
@@ -94,45 +145,45 @@ struct File {
     expression: Term,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 struct Parameter(String);
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 struct Let {
     name: Parameter,
     value: Term,
     next: Term,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 struct Function {
     parameters: Vec<Parameter>,
     value: Term,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 struct If {
     condition: Term,
     then: Term,
     otherwise: Term,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 struct Call {
     callee: Term,
     arguments: Vec<Term>,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 struct Var(String);
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 struct First(Term);
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 struct Second(Term);
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 struct Print(Term);
 
 fn parse_term(v: &Value) -> Term {
@@ -213,20 +264,62 @@ fn parse_tuple(v: &Value) -> Tuple {
 }
 
 fn eval(t: TermValue) -> TermValue {
-    match t {
+   match t {
         TermValue::Int(_) => t,
         TermValue::Str(_) => t,
         TermValue::Boolean(_) => t,
+        TermValue::Tuple(_) => t,
         TermValue::Let(_) => todo!(),
         TermValue::Function(_) => todo!(),
         TermValue::If(i) => eval_if(i),
         TermValue::Binary(b) => eval_binary(b.as_ref()),
         TermValue::Call(_) => todo!(),
         TermValue::Var(_) => todo!(),
-        TermValue::Print(_) => todo!(),
-        TermValue::First(_) => todo!(),
-        TermValue::Second(_) => todo!(),
-        TermValue::Tuple(_) => todo!(),
+        TermValue::Print(p) => eval_print(*p),
+        TermValue::First(t) => eval_first(*t),
+        TermValue::Second(t) => eval_second(*t)
+    }
+}
+
+fn eval_first(f: First) -> TermValue {
+    let First(e) = f;
+    match &e.value {
+        TermValue::Tuple(t) => t.first.value.to_owned(),
+        _ => panic!("`first` received argument other than a tuple")
+    }
+}
+
+fn eval_second(s: Second) -> TermValue {
+    let Second(e) = s;
+    match &e.value {
+        TermValue::Tuple(t) => t.second.value.to_owned(),
+        _ => panic!("`second` received argument other than a tuple")
+    }
+}
+
+fn eval_print(p: Print) -> TermValue {
+    let Print(term) = p;
+    println!("{}", serialize(&term.value));
+    term.value
+}
+
+fn serialize(t: &TermValue) -> String {
+    match t {
+        TermValue::Int(i) => format!("{}", i),
+        TermValue::Str(s)  => format!("{}", s),
+        TermValue::Boolean(b) => format!("{}", b),
+        TermValue::Function(_)  => "<#closure>".into(),
+        TermValue::Tuple(t) => format!("({}, {})", serialize(&t.first.value), serialize(&t.second.value)),
+        _ => panic!("`print` does not accept the given argument")
+    }
+}
+
+
+fn eval_if(i: Box<If>) -> TermValue {
+    match eval(i.condition.value) {
+        TermValue::Boolean(true) => eval(i.then.value),
+        TermValue::Boolean(false) => eval(i.otherwise.value),
+        _ => panic!("`if` received non-boolean argument")
     }
 }
 
@@ -501,43 +594,49 @@ fn get_field<'a>(field_name: &str, v: &'a Value) -> &'a Value {
 }
 
 fn main() {
-    let file = std::fs::File::open("files/fib.json").expect("couldn't open file");
+    let file = std::fs::File::open("files/test.json").expect("couldn't open file");
     let buf_reader = BufReader::new(file);
     let v: Value = serde_json::from_reader(buf_reader).expect("failed to read json");
 
-    println!("hello world")
+    let f = parse_file(&v);
+
+    // println!("hello world")
     // dbg!(eval_binary(&binary));
+    eval(f.expression.value);
+
 }
 
 #[cfg(test)]
 mod tests {
+    use std::vec;
+
     use super::*;
 
     // TODO: write macro for simplifying expr creation in binary expr tests
     #[test]
     fn test_add_int_int() {
-        let expr = binary!(TermValue::Int(32), BinaryOperator::Add, TermValue::Int(32));
+        let expr = binary_expr!(TermValue::Int(32), BinaryOperator::Add, TermValue::Int(32));
         let result = add_operation(&expr);
         assert_eq!(result, TermValue::Int(64));
     }
 
     #[test]
     fn test_add_int_str() {
-        let expr = binary!(TermValue::Int(32), BinaryOperator::Add, TermValue::Str("64".into()));
+        let expr = binary_expr!(TermValue::Int(32), BinaryOperator::Add, TermValue::Str("64".into()));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Str("3264".into()));
     }
 
     #[test]
     fn test_add_str_int() {
-        let expr = binary!(TermValue::Str("64".into()), BinaryOperator::Add, TermValue::Int(32));
+        let expr = binary_expr!(TermValue::Str("64".into()), BinaryOperator::Add, TermValue::Int(32));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Str("6432".into()));
     }
 
     #[test]
     fn test_add_str_str() {
-        let expr = binary!(TermValue::Str("32".into()), BinaryOperator::Add, TermValue::Str("64".into()));
+        let expr = binary_expr!(TermValue::Str("32".into()), BinaryOperator::Add, TermValue::Str("64".into()));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Str("3264".into()));
     }
@@ -546,40 +645,40 @@ mod tests {
 
     #[test]
     fn test_eq_str_str() {
-        let expr = binary!(TermValue::Str("igualstrings".into()), BinaryOperator::Eq, TermValue::Str("igualstrings".into()));
+        let expr = binary_expr!(TermValue::Str("igualstrings".into()), BinaryOperator::Eq, TermValue::Str("igualstrings".into()));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(true));
 
-        let expr = binary!(TermValue::Str("diffstrings".into()), BinaryOperator::Eq, TermValue::Str("igualstrings".into()));
+        let expr = binary_expr!(TermValue::Str("diffstrings".into()), BinaryOperator::Eq, TermValue::Str("igualstrings".into()));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(false));
     }
 
     #[test]
     fn test_eq_int_int() {
-        let expr = binary!(TermValue::Int(59), BinaryOperator::Eq, TermValue::Int(59));
+        let expr = binary_expr!(TermValue::Int(59), BinaryOperator::Eq, TermValue::Int(59));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(true));
 
-        let expr = binary!(TermValue::Int(59), BinaryOperator::Eq, TermValue::Int(80));
+        let expr = binary_expr!(TermValue::Int(59), BinaryOperator::Eq, TermValue::Int(80));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(false));
     }
 
     #[test]
     fn test_eq_bool_bool() {
-        let expr = binary!(TermValue::Boolean(true), BinaryOperator::Eq, TermValue::Boolean(true));
+        let expr = binary_expr!(TermValue::Boolean(true), BinaryOperator::Eq, TermValue::Boolean(true));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(true));
 
-        let expr = binary!(TermValue::Boolean(true), BinaryOperator::Eq, TermValue::Boolean(false));
+        let expr = binary_expr!(TermValue::Boolean(true), BinaryOperator::Eq, TermValue::Boolean(false));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(false));
     }
 
     #[test]
     fn test_eq_int_bool() {
-        let expr = binary!(TermValue::Int(15), BinaryOperator::Eq, TermValue::Boolean(true));
+        let expr = binary_expr!(TermValue::Int(15), BinaryOperator::Eq, TermValue::Boolean(true));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(false));
     }
@@ -587,11 +686,11 @@ mod tests {
     // -----------------------------------------------
     #[test]
     fn test_and_bool() {
-        let expr = binary!(TermValue::Boolean(true), BinaryOperator::And, TermValue::Boolean(false));
+        let expr = binary_expr!(TermValue::Boolean(true), BinaryOperator::And, TermValue::Boolean(false));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(false));
 
-        let expr = binary!(TermValue::Boolean(true), BinaryOperator::And, TermValue::Boolean(true));
+        let expr = binary_expr!(TermValue::Boolean(true), BinaryOperator::And, TermValue::Boolean(true));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(true));
     }
@@ -600,11 +699,11 @@ mod tests {
 
     #[test]
     fn test_or_bool() {
-        let expr = binary!(TermValue::Boolean(true), BinaryOperator::Or, TermValue::Boolean(false));
+        let expr = binary_expr!(TermValue::Boolean(true), BinaryOperator::Or, TermValue::Boolean(false));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(true));
 
-        let expr = binary!(TermValue::Boolean(false), BinaryOperator::Or, TermValue::Boolean(false));
+        let expr = binary_expr!(TermValue::Boolean(false), BinaryOperator::Or, TermValue::Boolean(false));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(false));
     }
@@ -613,11 +712,11 @@ mod tests {
 
     #[test]
     fn test_gt_int() {
-        let expr = binary!(TermValue::Int(32), BinaryOperator::Gt, TermValue::Int(24));
+        let expr = binary_expr!(TermValue::Int(32), BinaryOperator::Gt, TermValue::Int(24));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(true));
 
-        let expr = binary!(TermValue::Int(32), BinaryOperator::Gt, TermValue::Int(64));
+        let expr = binary_expr!(TermValue::Int(32), BinaryOperator::Gt, TermValue::Int(64));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(false));
     }
@@ -626,11 +725,11 @@ mod tests {
 
     #[test]
     fn test_lt_int() {
-        let expr = binary!(TermValue::Int(64), BinaryOperator::Lt, TermValue::Int(32));
+        let expr = binary_expr!(TermValue::Int(64), BinaryOperator::Lt, TermValue::Int(32));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(false));
 
-        let expr = binary!(TermValue::Int(22), BinaryOperator::Lt, TermValue::Int(32));
+        let expr = binary_expr!(TermValue::Int(22), BinaryOperator::Lt, TermValue::Int(32));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(true));
     }
@@ -639,11 +738,11 @@ mod tests {
 
     #[test]
     fn test_lte_int() {
-        let expr = binary!(TermValue::Int(64), BinaryOperator::Lte, TermValue::Int(64));
+        let expr = binary_expr!(TermValue::Int(64), BinaryOperator::Lte, TermValue::Int(64));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(true));
 
-        let expr = binary!(TermValue::Int(65), BinaryOperator::Lte, TermValue::Int(64));
+        let expr = binary_expr!(TermValue::Int(65), BinaryOperator::Lte, TermValue::Int(64));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(false));
     }
@@ -652,11 +751,11 @@ mod tests {
 
     #[test]
     fn test_gte_int() {
-        let expr = binary!(TermValue::Int(64), BinaryOperator::Gte, TermValue::Int(64));
+        let expr = binary_expr!(TermValue::Int(64), BinaryOperator::Gte, TermValue::Int(64));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(true));
 
-        let expr = binary!(TermValue::Int(10), BinaryOperator::Gte, TermValue::Int(5));
+        let expr = binary_expr!(TermValue::Int(10), BinaryOperator::Gte, TermValue::Int(5));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(true));
     }
@@ -664,7 +763,7 @@ mod tests {
     // -----------------------------------------------
     #[test]
     fn test_mul_int() {
-        let expr = binary!(TermValue::Int(64), BinaryOperator::Mul, TermValue::Int(32));
+        let expr = binary_expr!(TermValue::Int(64), BinaryOperator::Mul, TermValue::Int(32));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Int(2048));
     }
@@ -673,7 +772,7 @@ mod tests {
 
     #[test]
     fn test_div_int() {
-        let expr = binary!(TermValue::Int(64), BinaryOperator::Div, TermValue::Int(2));
+        let expr = binary_expr!(TermValue::Int(64), BinaryOperator::Div, TermValue::Int(2));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Int(32));
     }
@@ -682,11 +781,11 @@ mod tests {
 
     #[test]
     fn test_rem_int() {
-        let expr = binary!(TermValue::Int(64), BinaryOperator::Rem, TermValue::Int(2));
+        let expr = binary_expr!(TermValue::Int(64), BinaryOperator::Rem, TermValue::Int(2));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Int(0));
 
-        let expr = binary!(TermValue::Int(3), BinaryOperator::Rem, TermValue::Int(2));
+        let expr = binary_expr!(TermValue::Int(3), BinaryOperator::Rem, TermValue::Int(2));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Int(1));
     }
@@ -695,25 +794,25 @@ mod tests {
 
     #[test]
     fn test_neq_int() {
-        let expr = binary!(TermValue::Int(64), BinaryOperator::Neq, TermValue::Int(2));
+        let expr = binary_expr!(TermValue::Int(64), BinaryOperator::Neq, TermValue::Int(2));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(true));
     }
 
     #[test]
     fn test_neq_str() {
-        let expr = binary!(TermValue::Str("alou".into()), BinaryOperator::Neq, TermValue::Str("alou".into()));
+        let expr = binary_expr!(TermValue::Str("alou".into()), BinaryOperator::Neq, TermValue::Str("alou".into()));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(false));
 
-        let expr = binary!(TermValue::Str("alou".into()), BinaryOperator::Neq, TermValue::Str("alo".into()));
+        let expr = binary_expr!(TermValue::Str("alou".into()), BinaryOperator::Neq, TermValue::Str("alo".into()));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(true));
     }
 
     #[test]
     fn test_neq_bool() {
-        let expr = binary!(TermValue::Boolean(true), BinaryOperator::Neq, TermValue::Boolean(false));
+        let expr = binary_expr!(TermValue::Boolean(true), BinaryOperator::Neq, TermValue::Boolean(false));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Boolean(true));
     }
@@ -722,12 +821,128 @@ mod tests {
 
     #[test]
     fn test_sub_int() {
-        let expr = binary!(TermValue::Int(64), BinaryOperator::Sub, TermValue::Int(2));
+        let expr = binary_expr!(TermValue::Int(64), BinaryOperator::Sub, TermValue::Int(2));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Int(62));
 
-        let expr = binary!(TermValue::Int(32), BinaryOperator::Sub, TermValue::Int(64));
+        let expr = binary_expr!(TermValue::Int(32), BinaryOperator::Sub, TermValue::Int(64));
         let result = eval_binary(&expr);
         assert_eq!(result, TermValue::Int(-32));
     }
+
+     // ------------------------------------------------
+
+     #[test]
+     fn test_if() {
+         let then = TermValue::Int(-1);
+         let otherwise = TermValue::Int(1);
+         let expr = if_expr!(TermValue::Boolean(true), then.clone(), otherwise);
+         let result = eval_if(expr);
+         assert_eq!(result, then);
+
+         let then = TermValue::Int(-1);
+         let otherwise = TermValue::Int(1);
+         let expr = if_expr!(TermValue::Boolean(false), then, otherwise.clone());
+         let result = eval_if(expr);
+         assert_eq!(result, otherwise);
+     }
+
+     #[test]
+     fn test_if_evaluates_true_branch() {
+         let then = TermValue::Binary(Box::new(binary_expr!(TermValue::Int(5), BinaryOperator::Add, TermValue::Int(5))));
+         let otherwise = TermValue::Int(0);
+         let expr = if_expr!(TermValue::Boolean(true), then, otherwise);
+         let result = eval_if(expr);
+         assert_eq!(result, TermValue::Int(10));
+     }
+
+     #[test]
+     fn test_if_evaluates_false_branch() {
+         let then = TermValue::Int(100);
+         let otherwise = TermValue::Binary(Box::new(binary_expr!(TermValue::Int(5), BinaryOperator::Sub, TermValue::Int(5))));
+         let expr = if_expr!(TermValue::Boolean(false), then, otherwise);
+         let result = eval_if(expr);
+         assert_eq!(result, TermValue::Int(0));
+     }
+
+     #[test]
+     #[should_panic(expected = "`if` received non-boolean argument")]
+     fn test_if_panics() {
+         let expr = if_expr!(TermValue::Int(100), TermValue::Int(-1), TermValue::Int(1));
+         eval_if(expr);
+     }
+
+     // ------------------------------------------------
+
+     #[test]
+     fn test_serialize_int() {
+         let result = serialize(&TermValue::Int(2));
+         assert_eq!(result, "2");
+     }
+
+     #[test]
+     fn test_serialize_string() {
+        let result = serialize(&TermValue::Str("PNEU".into()));
+        assert_eq!(result, "PNEU");
+    }
+
+    #[test]
+     fn test_serialize_boolean() {
+        let result = serialize(&TermValue::Boolean(true));
+        assert_eq!(result, "true");
+    }
+
+    #[test]
+    fn test_serialize_function() {
+        let params = vec![Parameter("a".into()), Parameter("b".into())];
+        let fun = TermValue::Function(func_expr!(params, TermValue::Int(10)));
+        let result = serialize(&fun);
+        assert_eq!(result, "<#closure>")
+    }
+
+    #[test]
+     fn test_serialize_tuple() {
+        let tuple = TermValue::Tuple(tuple_expr!(TermValue::Int(5), TermValue::Int(6)));
+        let result = serialize(&tuple);
+        assert_eq!(result, "(5, 6)");
+     }
+
+     #[test]
+     fn test_serialize_nested_tuple() {
+        let inner_tuple = TermValue::Tuple(tuple_expr!(TermValue::Int(5), TermValue::Boolean(true)));
+        let outer_tuple = TermValue::Tuple(tuple_expr!(inner_tuple, TermValue::Int(6)));
+        let result = serialize(&outer_tuple);
+
+         assert_eq!(result, "((5, true), 6)");
+     }
+
+     // -------------------------------------
+
+     #[test]
+     fn test_first() {
+        let first = First(term_expr!(TermValue::Tuple(tuple_expr!(TermValue::Int(5), TermValue::Boolean(true)))));
+        let result = eval_first(first);
+         assert_eq!(result, TermValue::Int(5));
+     }
+
+     #[test]
+     #[should_panic(expected = "`first` received argument other than a tuple")]
+     fn test_first_panics_on_bad_input() {
+        let first = First(term_expr!(TermValue::Int(5)));
+        eval_first(first);
+     }
+
+     #[test]
+     fn test_second() {
+        let second = Second(term_expr!(TermValue::Tuple(tuple_expr!(TermValue::Int(5), TermValue::Boolean(true)))));
+        let result = eval_second(second);
+        assert_eq!(result, TermValue::Boolean(true));
+     }
+
+     #[test]
+     #[should_panic(expected = "`second` received argument other than a tuple")]
+     fn test_second_panics_on_bad_input() {
+        let second = Second(term_expr!(TermValue::Int(5)));
+        eval_second(second);
+     }
 }
