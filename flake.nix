@@ -13,10 +13,11 @@
       in
       {
         devShell = with pkgs; mkShell {
-          buildInputs = [ 
+          buildInputs = [
             rustc
             cargo
             rustfmt
+            clippy
 
             rust-analyzer
           ];

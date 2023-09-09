@@ -309,7 +309,7 @@ fn eval_print(p: Print, env: &mut Env, memo: &mut Memo) -> TermValue {
 fn serialize(t: &TermValue) -> String {
     match t {
         TermValue::Int(i) => format!("{}", i),
-        TermValue::Str(s) => format!("{}", s),
+        TermValue::Str(s) => s.to_string(),
         TermValue::Boolean(b) => format!("{}", b),
         TermValue::Function(_) => "<#closure>".into(),
         TermValue::Tuple(t) => format!(
@@ -599,7 +599,7 @@ fn as_bool(v: &Value) -> bool {
 
 fn get_field<'a>(field_name: &str, v: &'a Value) -> &'a Value {
     v.get(field_name)
-        .expect(format!("expected field '{}'", field_name).as_str())
+        .unwrap_or_else(|| panic!("expected field '{}'", field_name))
 }
 
 fn main() {
