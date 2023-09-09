@@ -1,0 +1,186 @@
+{
+  "name": "fib.rinha",
+  "expression": {
+    "kind": "Let",
+    "name": {
+      "text": "fac",
+      "location": {
+        "start": 4,
+        "end": 7,
+        "filename": "fib.rinha"
+      }
+    },
+    "value": {
+      "kind": "Function",
+      "parameters": [
+        {
+          "text": "n",
+          "location": {
+            "start": 14,
+            "end": 15,
+            "filename": "fib.rinha"
+          }
+        }
+      ],
+      "value": {
+        "kind": "If",
+        "condition": {
+          "kind": "Binary",
+          "lhs": {
+            "kind": "Var",
+            "text": "n",
+            "location": {
+              "start": 28,
+              "end": 29,
+              "filename": "fib.rinha"
+            }
+          },
+          "op": "Lte",
+          "rhs": {
+            "kind": "Int",
+            "value": 1,
+            "location": {
+              "start": 33,
+              "end": 34,
+              "filename": "fib.rinha"
+            }
+          },
+          "location": {
+            "start": 28,
+            "end": 34,
+            "filename": "fib.rinha"
+          }
+        },
+        "then": {
+          "kind": "Int",
+          "value": 1,
+          "location": {
+            "start": 42,
+            "end": 43,
+            "filename": "fib.rinha"
+          }
+        },
+        "otherwise": {
+          "kind": "Binary",
+          "lhs": {
+            "kind": "Var",
+            "text": "n",
+            "location": {
+              "start": 59,
+              "end": 60,
+              "filename": "fib.rinha"
+            }
+          },
+          "op": "Mul",
+          "rhs": {
+            "kind": "Call",
+            "callee": {
+              "kind": "Var",
+              "text": "fac",
+              "location": {
+                "start": 63,
+                "end": 66,
+                "filename": "fib.rinha"
+              }
+            },
+            "arguments": [
+              {
+                "kind": "Binary",
+                "lhs": {
+                  "kind": "Var",
+                  "text": "n",
+                  "location": {
+                    "start": 67,
+                    "end": 68,
+                    "filename": "fib.rinha"
+                  }
+                },
+                "op": "Sub",
+                "rhs": {
+                  "kind": "Int",
+                  "value": 1,
+                  "location": {
+                    "start": 71,
+                    "end": 72,
+                    "filename": "fib.rinha"
+                  }
+                },
+                "location": {
+                  "start": 67,
+                  "end": 72,
+                  "filename": "fib.rinha"
+                }
+              }
+            ],
+            "location": {
+              "start": 63,
+              "end": 73,
+              "filename": "fib.rinha"
+            }
+          },
+          "location": {
+            "start": 59,
+            "end": 73,
+            "filename": "fib.rinha"
+          }
+        },
+        "location": {
+          "start": 24,
+          "end": 77,
+          "filename": "fib.rinha"
+        }
+      },
+      "location": {
+        "start": 10,
+        "end": 79,
+        "filename": "fib.rinha"
+      }
+    },
+    "next": {
+      "kind": "Print",
+      "value": {
+        "kind": "Call",
+        "callee": {
+          "kind": "Var",
+          "text": "fac",
+          "location": {
+            "start": 87,
+            "end": 90,
+            "filename": "fib.rinha"
+          }
+        },
+        "arguments": [
+          {
+            "kind": "Int",
+            "value": 20,
+            "location": {
+              "start": 91,
+              "end": 95,
+              "filename": "fib.rinha"
+            }
+          }
+        ],
+        "location": {
+          "start": 87,
+          "end": 96,
+          "filename": "fib.rinha"
+        }
+      },
+      "location": {
+        "start": 81,
+        "end": 97,
+        "filename": "fib.rinha"
+      }
+    },
+    "location": {
+      "start": 0,
+      "end": 97,
+      "filename": "fib.rinha"
+    }
+  },
+  "location": {
+    "start": 0,
+    "end": 97,
+    "filename": "fib.rinha"
+  }
+}
